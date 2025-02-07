@@ -2,6 +2,7 @@ import asyncHandler from 'express-async-handler';
 import User from '../../models/auth/userModel.js';
 import generateToken from '../../helpers/generateToken.js';
 import bycrypt from 'bcrypt';
+import e from 'express';
 
 export const registerUser = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
@@ -107,4 +108,44 @@ export const loginUser = asyncHandler(async (req, res) => {
 export const logoutUser = asyncHandler(async (req, res) => {
     res.clearCookie("token");
     res.status(200).json({ message: "Logout successfully" });
+});
+
+//get user profile
+export const getUser = asyncHandler(async (req, res) => {
+    //get user data from token without password
+    const user = await User.findById(req.user._id).select('-password');
+    if(user){
+        res.status(200).json(user);
+    }
+    else{
+        res.status(404).json({ message: "User not found" });
+    }
+});
+
+//update user profile
+export const updateUser = asyncHandler(async (req, res) => {
+    //get user data from token (protect middleware)
+    const user = await User.findById(req.user._id);
+
+    if(user){
+        //user properties update
+        const{ name, photo, bio } = req.body;
+        user.name = req.body.name || user.name;
+        user.photo = req.body.photo || user.photo;
+        user.bio = req.body.bio || user.bio;
+
+        //save updated user data
+        const updated = await user.save();
+        res.status(200).json({
+            _id: updated._id,
+            name: updated.name,
+            email: updated.email,
+            role: updated.role, 
+            photo: updated.photo, 
+            bio: updated.bio, 
+            isVerified: updated.isVerified });
+    }
+    else{
+        res.status(404).json({ message: "User not found" });
+    }
 });
